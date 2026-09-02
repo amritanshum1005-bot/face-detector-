@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link class="favicon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>who?! you?????</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div id="app">
+        <header class="app-header animate-fade-in">
+            <div class="brand">
+                <div class="status-indicator-dot"></div>
+                <h1 class="shimmer-title">who?! <span class="accent-text">you?????</span></h1>
+                <span class="version-tag">v2.0.0</span>
+            </div>
+            <div class="system-stats">
+                <div class="stat-badge">
+                    <span class="badge-label">FPS:</span>
+                    <span id="fps-counter" class="badge-val text-mono">00</span>
+                </div>
+                <div class="stat-badge">
+                    <span class="badge-label">Backend:</span>
+                    <span id="backend-type" class="badge-val text-mono">WebGL</span>
+                </div>
+                <div class="stat-badge">
+                    <span class="badge-label">Status:</span>
+                    <span id="system-status" class="badge-val">Initializing...</span>
+                </div>
+                <button id="theme-toggle" class="theme-btn" aria-label="Toggle Theme">
+                    <svg id="theme-icon-sun" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg id="theme-icon-moon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <section class="viewport-card panel-card animate-slide-up" aria-label="Camera Live Viewport">
+                <div class="viewport-header">
+                    <div class="viewport-title">
+                        <span class="live-indicator"></span>
+                        <h2>Live Camera Feed</h2>
+                    </div>
+                    <div id="viewport-resolution" class="viewport-meta text-mono">0x0</div>
+                </div>
+                <div class="video-container">
+                    <video id="webcam" autoplay playsinline muted></video>
+                    <canvas id="overlay"></canvas>
+                    <div id="model-loader" class="loader-overlay">
+                        <div class="loader-content">
+                            <div class="spinner"></div>
+                            <h3>Loading Core AI Engines</h3>
+                            <p class="loader-status">Allocating textures and configuring weights...</p>
+                            <div class="model-checklists">
+                                <div class="check-item" id="chk-coco"><span class="check-box"></span> Object Neural
+                                    Trackers</div>
+                                <div class="check-item" id="chk-hands">
+                                    <span class="check-box"></span> Hand Landmarker (MediaPipe)
+                                </div>
+                                <div class="check-item" id="chk-face"><span class="check-box"></span> Face Matrices
+                                </div>
+                                <div class="check-item" id="chk-landmarks"><span class="check-box"></span> Landmark
+                                    Correlators</div>
+                                <div class="check-item" id="chk-emotions"><span class="check-box"></span> Emotion
+                                    Mapping Engines</div>
+                                <div class="check-item" id="chk-age"><span class="check-box"></span> Age & Demographics
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="error-banner" class="error-overlay hidden">
+                        <div class="error-content">
+                            <span class="error-icon">⚠️</span>
+                            <h3>Stream Interface Failure</h3>
+                            <p id="error-message">Unable to identify valid tracking dimensions.</p>
+                            <button id="btn-retry" class="control-btn">Re-initialize</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="hud-controls">
+                    <button id="btn-pause-stream" class="hud-btn" title="Pause Frame Engine">
+                        <svg viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="6" y="4" width="4" height="16"></rect>
+                            <rect x="14" y="4" width="4" height="16"></rect>
+                        </svg>
+                    </button>
+                    <button id="btn-screenshot" class="hud-btn" title="Export Snapshot Context">
+                        <svg viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                            </path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                    </button>
+                    <button id="btn-toggle-hud" class="hud-btn active" title="Toggle HUD Topology Overlays">
+                        <svg viewBox="0 0 24 24" class="icon" fill="none" stroke="currentColor" stroke-width="2">
+                            <path
+                                d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                            </path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+            </section>
+
+            <section class="analytics-sidebar animate-slide-up" aria-label="Analytics & Control Node">
+                <nav class="sidebar-tabs" role="tablist">
+                    <button class="tab-btn active" data-tab="tab-settings" role="tab"
+                        aria-selected="true">Settings</button>
+                    <button class="tab-btn" data-tab="tab-detections" role="tab" aria-selected="false">Detections <span
+                            id="tab-obj-count" class="tab-badge">0</span></button>
+                    <button class="tab-btn" data-tab="tab-biometrics" role="tab" aria-selected="false">Biometrics <span
+                            id="tab-face-count" class="tab-badge">0</span></button>
+                    <button class="tab-btn" data-tab="tab-stats" role="tab" aria-selected="false">Stats</button>
+                </nav>
+
+                <div class="tab-panes">
+                    <div id="tab-settings" class="tab-pane active" role="tabpanel">
+                        <div class="analytics-card panel-card">
+                            <div class="card-header"><span class="card-icon">⚙️</span>
+                                <h3>SYSTEM SETTINGS</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="camera-select">VIDEO INPUT SOURCE</label>
+                                    <select id="camera-select" class="form-select">
+                                        <option value="">Scanning hardware paths...</option>
+                                    </select>
+                                </div>
+                                <div class="toggle-group-row">
+                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                id="toggle-objects" checked><span class="slider"></span></label><span
+                                            class="toggle-label">Detect Objects</span></div>
+                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                id="toggle-faces" checked><span class="slider"></span></label><span
+                                            class="toggle-label">Analyze Faces</span></div>
+                                </div>
+                                <div class="toggle-group-row">
+                                    <div class="toggle-item">
+                                        <label class="switch-container">
+                                            <input type="checkbox" id="toggle-hands" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="toggle-label">Spiderweb Hands</span>
+                                    </div>
+                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                id="toggle-gestures" checked><span class="slider"></span></label><span
+                                            class="toggle-label">Hand Gestures</span></div>
+                                </div>
+                                <div class="toggle-group-row">
+                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                id="toggle-spider" checked><span class="slider"></span></label><span
+                                            class="toggle-label">Spider Effect</span></div>
+                                    <div class="toggle-item">
+                                        <label class="switch-container">
+                                            <input type="checkbox" id="toggle-numbers" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="toggle-label">Show Joint Numbers</span>
+                                    </div>
+                                </div>
+                                <div class="form-group slider-group">
+                                    <div class="slider-header"><label for="confidence-threshold">CONFIDENCE THRESHOLD</label><span id="confidence-val"
+                                            class="text-mono font-bold">40%</span></div>
+                                    <input type="range" id="confidence-threshold" min="20" max="90" value="40"
+                                        class="form-slider">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-detections" class="tab-pane" role="tabpanel">
+                        <div class="analytics-card panel-card flex-grow-card">
+                            <div class="card-header"><span class="card-icon">🔍</span>
+                                <h3>Object Vector Streams</h3><span id="total-objects-badge"
+                                    class="stats-badge text-mono">0</span>
+                            </div>
+                            <div class="card-body overflow-y">
+                                <div id="detections-container" class="detections-list">
+                                    <div class="empty-state">
+                                        <p>Awaiting ingestion arrays...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-biometrics" class="tab-pane" role="tabpanel">
+                        <div class="analytics-card panel-card">
+                            <div class="card-header"><span class="card-icon">👤</span>
+                                <h3>Biometric Registry</h3><span id="face-count-badge"
+                                    class="stats-badge text-mono">0</span>
+                            </div>
+                            <div class="card-body">
+                                <div id="face-analytics-container" class="face-grid">
+                                    <div class="empty-state">
+                                        <p>Zero targets inside current projection field.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tab-stats" class="tab-pane" role="tabpanel">
+                        <div class="analytics-card panel-card">
+                            <div class="card-header"><span class="card-icon">📊</span>
+                                <h3>Telemetry Rollups</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="telemetry-grid">
+                                    <div class="telemetry-box"><span class="telemetry-label">Unique Identity
+                                            Structs</span><span id="tel-unique-faces"
+                                            class="telemetry-value text-mono">0</span></div>
+                                    <div class="telemetry-box"><span class="telemetry-label">Mean Chrono-Age</span><span
+                                            id="tel-avg-age" class="telemetry-value text-mono">--</span></div>
+                                </div>
+                                <div class="emotion-trend-section">
+                                    <h4 class="section-title">Aggregated Emotion Metrics</h4>
+                                    <div class="emotion-bars-container">
+                                        <div class="emotion-bar-item"><span class="emotion-name">Happy</span>
+                                            <div class="emotion-bar-track">
+                                                <div id="bar-happy" class="emotion-bar-fill happy-color"
+                                                    style="width: 0%"></div>
+                                            </div><span id="pct-happy" class="emotion-pct text-mono">0%</span>
+                                        </div>
+                                        <div class="emotion-bar-item"><span class="emotion-name">Neutral</span>
+                                            <div class="emotion-bar-track">
+                                                <div id="bar-neutral" class="emotion-bar-fill neutral-color"
+                                                    style="width: 0%"></div>
+                                            </div><span id="pct-neutral" class="emotion-pct text-mono">0%</span>
+                                        </div>
+                                        <div class="emotion-bar-item"><span class="emotion-name">Surprised</span>
+                                            <div class="emotion-bar-track">
+                                                <div id="bar-surprised" class="emotion-bar-fill surprised-color"
+                                                    style="width: 0%"></div>
+                                            </div><span id="pct-surprised" class="emotion-pct text-mono">0%</span>
+                                        </div>
+                                        <div class="emotion-bar-item"><span class="emotion-name">Sad</span>
+                                            <div class="emotion-bar-track">
+                                                <div id="bar-sad" class="emotion-bar-fill sad-color" style="width: 0%">
+                                                </div>
+                                            </div><span id="pct-sad" class="emotion-pct text-mono">0%</span>
+                                        </div>
+                                        <div class="emotion-bar-item"><span class="emotion-name">Angry</span>
+                                            <div class="emotion-bar-track">
+                                                <div id="bar-angry" class="emotion-bar-fill angry-color"
+                                                    style="width: 0%"></div>
+                                            </div><span id="pct-angry" class="emotion-pct text-mono">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
