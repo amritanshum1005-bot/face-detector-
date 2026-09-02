@@ -21,37 +21,44 @@
                 <h1 class="shimmer-title">who?! <span class="accent-text">you?????</span></h1>
                 <span class="version-tag">v2.0.0</span>
             </div>
-            <div class="system-stats">
-                <div class="stat-badge">
-                    <span class="badge-label">FPS:</span>
-                    <span id="fps-counter" class="badge-val text-mono">00</span>
-                </div>
-                <div class="stat-badge">
-                    <span class="badge-label">Backend:</span>
-                    <span id="backend-type" class="badge-val text-mono">WebGL</span>
-                </div>
-                <div class="stat-badge">
-                    <span class="badge-label">Status:</span>
-                    <span id="system-status" class="badge-val">Initializing...</span>
-                </div>
-                <button id="theme-toggle" class="theme-btn" aria-label="Toggle Theme">
-                    <svg id="theme-icon-sun" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                    <svg id="theme-icon-moon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
+            <div class="header-actions">
+                <button id="btn-open-hub" class="hub-master-btn">
+                    <span class="hub-btn-glow"></span>
+                    <span class="hub-btn-icon">✨</span>
+                    <span>FEATURE CONTROL HUB</span>
                 </button>
+                <div class="system-stats">
+                    <div class="stat-badge">
+                        <span class="badge-label">FPS:</span>
+                        <span id="fps-counter" class="badge-val text-mono">00</span>
+                    </div>
+                    <div class="stat-badge">
+                        <span class="badge-label">Backend:</span>
+                        <span id="backend-type" class="badge-val text-mono">WebGL</span>
+                    </div>
+                    <div class="stat-badge">
+                        <span class="badge-label">Status:</span>
+                        <span id="system-status" class="badge-val">Initializing...</span>
+                    </div>
+                    <button id="theme-toggle" class="theme-btn" aria-label="Toggle Theme">
+                        <svg id="theme-icon-sun" class="icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg id="theme-icon-moon" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -66,7 +73,20 @@
                 </div>
                 <div class="video-container">
                     <video id="webcam" autoplay playsinline muted></video>
+                    <canvas id="drawing-canvas"></canvas>
                     <canvas id="overlay"></canvas>
+                    <div id="air-canvas-toolbar" class="air-toolbar">
+                        <button id="btn-toggle-air" class="air-btn active" title="Toggle Air Drawing Mode">🎨 Air Canvas</button>
+                        <div class="air-color-picker">
+                            <button class="color-swatch active" data-color="#00f2fe" style="background: #00f2fe" title="Cyber Cyan"></button>
+                            <button class="color-swatch" data-color="#ff007f" style="background: #ff007f" title="Neon Pink"></button>
+                            <button class="color-swatch" data-color="#00ff66" style="background: #00ff66" title="Matrix Green"></button>
+                            <button class="color-swatch" data-color="#ffea00" style="background: #ffea00" title="Solar Yellow"></button>
+                            <button class="color-swatch" data-color="#b026ff" style="background: #b026ff" title="Laser Purple"></button>
+                        </div>
+                        <input type="range" id="brush-size-slider" min="2" max="25" value="6" class="air-slider" title="Brush Size">
+                        <button id="btn-clear-canvas" class="air-btn" title="Clear Canvas (or hold Open Palm 🖐️)">🗑️ Clear</button>
+                    </div>
                     <div id="model-loader" class="loader-overlay">
                         <div class="loader-content">
                             <div class="spinner"></div>
@@ -97,6 +117,13 @@
                             <button id="btn-retry" class="control-btn">Re-initialize</button>
                         </div>
                     </div>
+                    <div id="drowsiness-alert-overlay" class="drowsy-banner-overlay hidden">
+                        <div class="drowsy-banner-content">
+                            <span class="alert-pulse-icon">🚨</span>
+                            <h3>DROWSINESS ALARM!</h3>
+                            <p>EYES CLOSED DETECTED — WAKE UP!</p>
+                        </div>
+                    </div>
                 </div>
                 <div class="hud-controls">
                     <button id="btn-pause-stream" class="hud-btn" title="Pause Frame Engine">
@@ -124,149 +151,212 @@
                 </div>
             </section>
 
-            <section class="analytics-sidebar animate-slide-up" aria-label="Analytics & Control Node">
-                <nav class="sidebar-tabs" role="tablist">
+        </main>
+
+        <!-- UNIFIED FEATURE CONTROL HUB MODAL -->
+        <div id="feature-hub-modal" class="hub-modal-overlay hidden">
+            <div class="hub-modal-container panel-card animate-scale-up">
+                <div class="hub-modal-header">
+                    <div class="hub-title-group">
+                        <span class="pulse-icon">✨</span>
+                        <h2>FEATURE CONTROL HUB & TELEMETRY NODE</h2>
+                    </div>
+                    <button id="btn-close-hub" class="hub-close-btn" aria-label="Close Modal">✕</button>
+                </div>
+                <nav class="sidebar-tabs modal-tabs" role="tablist">
                     <button class="tab-btn active" data-tab="tab-settings" role="tab"
-                        aria-selected="true">Settings</button>
-                    <button class="tab-btn" data-tab="tab-detections" role="tab" aria-selected="false">Detections <span
+                        aria-selected="true">⚙️ Settings</button>
+                    <button class="tab-btn" data-tab="tab-detections" role="tab" aria-selected="false">🔍 Detections <span
                             id="tab-obj-count" class="tab-badge">0</span></button>
-                    <button class="tab-btn" data-tab="tab-biometrics" role="tab" aria-selected="false">Biometrics <span
+                    <button class="tab-btn" data-tab="tab-biometrics" role="tab" aria-selected="false">👤 Biometrics <span
                             id="tab-face-count" class="tab-badge">0</span></button>
-                    <button class="tab-btn" data-tab="tab-stats" role="tab" aria-selected="false">Stats</button>
+                    <button class="tab-btn" data-tab="tab-stats" role="tab" aria-selected="false">📊 Telemetry</button>
                 </nav>
-
-                <div class="tab-panes">
-                    <div id="tab-settings" class="tab-pane active" role="tabpanel">
-                        <div class="analytics-card panel-card">
-                            <div class="card-header"><span class="card-icon">⚙️</span>
-                                <h3>SYSTEM SETTINGS</h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-group">
-                                    <label for="camera-select">VIDEO INPUT SOURCE</label>
-                                    <select id="camera-select" class="form-select">
-                                        <option value="">Scanning hardware paths...</option>
-                                    </select>
+                <div class="hub-modal-body">
+                    <div class="tab-panes">
+                        <div id="tab-settings" class="tab-pane active" role="tabpanel">
+                            <div class="analytics-card">
+                                <div class="card-header"><span class="card-icon">⚙️</span>
+                                    <h3>SYSTEM CONFIGURATION & FEATURE SWITCHES</h3>
                                 </div>
-                                <div class="toggle-group-row">
-                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
-                                                id="toggle-objects" checked><span class="slider"></span></label><span
-                                            class="toggle-label">Detect Objects</span></div>
-                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
-                                                id="toggle-faces" checked><span class="slider"></span></label><span
-                                            class="toggle-label">Analyze Faces</span></div>
-                                </div>
-                                <div class="toggle-group-row">
-                                    <div class="toggle-item">
-                                        <label class="switch-container">
-                                            <input type="checkbox" id="toggle-hands" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                        <span class="toggle-label">Spiderweb Hands</span>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="camera-select">VIDEO INPUT SOURCE</label>
+                                        <select id="camera-select" class="form-select">
+                                            <option value="">Scanning hardware paths...</option>
+                                        </select>
                                     </div>
-                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
-                                                id="toggle-gestures" checked><span class="slider"></span></label><span
-                                            class="toggle-label">Hand Gestures</span></div>
-                                </div>
-                                <div class="toggle-group-row">
-                                    <div class="toggle-item"><label class="switch-container"><input type="checkbox"
-                                                id="toggle-spider" checked><span class="slider"></span></label><span
-                                            class="toggle-label">Spider Effect</span></div>
-                                    <div class="toggle-item">
-                                        <label class="switch-container">
-                                            <input type="checkbox" id="toggle-numbers" checked>
-                                            <span class="slider"></span>
-                                        </label>
-                                        <span class="toggle-label">Show Joint Numbers</span>
+                                    <div class="toggle-group-row">
+                                        <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                    id="toggle-objects" checked><span class="slider"></span></label><span
+                                                class="toggle-label">Detect Objects</span></div>
+                                        <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                    id="toggle-faces" checked><span class="slider"></span></label><span
+                                                class="toggle-label">Analyze Faces</span></div>
                                     </div>
-                                </div>
-                                <div class="form-group slider-group">
-                                    <div class="slider-header"><label for="confidence-threshold">CONFIDENCE THRESHOLD</label><span id="confidence-val"
-                                            class="text-mono font-bold">40%</span></div>
-                                    <input type="range" id="confidence-threshold" min="20" max="90" value="40"
-                                        class="form-slider">
+                                    <div class="toggle-group-row">
+                                        <div class="toggle-item">
+                                            <label class="switch-container">
+                                                <input type="checkbox" id="toggle-hands" checked>
+                                                <span class="slider"></span>
+                                            </label>
+                                            <span class="toggle-label">Spiderweb Hands</span>
+                                        </div>
+                                        <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                    id="toggle-gestures" checked><span class="slider"></span></label><span
+                                                class="toggle-label">Hand Gestures</span></div>
+                                    </div>
+                                    <div class="toggle-group-row">
+                                        <div class="toggle-item"><label class="switch-container"><input type="checkbox"
+                                                    id="toggle-spider" checked><span class="slider"></span></label><span
+                                                class="toggle-label">Spider Effect</span></div>
+                                        <div class="toggle-item">
+                                            <label class="switch-container">
+                                                <input type="checkbox" id="toggle-numbers" checked>
+                                                <span class="slider"></span>
+                                            </label>
+                                            <span class="toggle-label">Show Joint Numbers</span>
+                                        </div>
+                                    </div>
+                                    <div class="toggle-group-row">
+                                        <div class="toggle-item">
+                                            <label class="switch-container">
+                                                <input type="checkbox" id="toggle-drowsiness" checked>
+                                                <span class="slider"></span>
+                                            </label>
+                                            <span class="toggle-label">Drowsiness Monitor</span>
+                                        </div>
+                                        <div class="toggle-item">
+                                            <label class="switch-container">
+                                                <input type="checkbox" id="toggle-audio-alarm" checked>
+                                                <span class="slider"></span>
+                                            </label>
+                                            <span class="toggle-label">Audio Warning Alarm</span>
+                                        </div>
+                                    </div>
+                                    <div class="toggle-group-row">
+                                        <div class="toggle-item">
+                                            <label class="switch-container">
+                                                <input type="checkbox" id="toggle-sfx" checked>
+                                                <span class="slider"></span>
+                                            </label>
+                                            <span class="toggle-label">Cyber SFX Effects</span>
+                                        </div>
+                                        <div class="toggle-item">
+                                            <label class="switch-container">
+                                                <input type="checkbox" id="toggle-voice" checked>
+                                                <span class="slider"></span>
+                                            </label>
+                                            <span class="toggle-label">AI Voice Assistant</span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group slider-group">
+                                        <div class="slider-header"><label for="confidence-threshold">CONFIDENCE THRESHOLD</label><span id="confidence-val"
+                                                class="text-mono font-bold">40%</span></div>
+                                        <input type="range" id="confidence-threshold" min="20" max="90" value="40"
+                                            class="form-slider">
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div id="tab-detections" class="tab-pane" role="tabpanel">
-                        <div class="analytics-card panel-card flex-grow-card">
-                            <div class="card-header"><span class="card-icon">🔍</span>
-                                <h3>Object Vector Streams</h3><span id="total-objects-badge"
-                                    class="stats-badge text-mono">0</span>
-                            </div>
-                            <div class="card-body overflow-y">
-                                <div id="detections-container" class="detections-list">
-                                    <div class="empty-state">
-                                        <p>Awaiting ingestion arrays...</p>
+                        <div id="tab-detections" class="tab-pane" role="tabpanel">
+                            <div class="analytics-card flex-grow-card">
+                                <div class="card-header"><span class="card-icon">🔍</span>
+                                    <h3>Object Vector Streams</h3><span id="total-objects-badge"
+                                        class="stats-badge text-mono">0</span>
+                                </div>
+                                <div class="card-body overflow-y">
+                                    <div id="detections-container" class="detections-list">
+                                        <div class="empty-state">
+                                            <p>Awaiting ingestion arrays...</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div id="tab-biometrics" class="tab-pane" role="tabpanel">
-                        <div class="analytics-card panel-card">
-                            <div class="card-header"><span class="card-icon">👤</span>
-                                <h3>Biometric Registry</h3><span id="face-count-badge"
-                                    class="stats-badge text-mono">0</span>
-                            </div>
-                            <div class="card-body">
-                                <div id="face-analytics-container" class="face-grid">
-                                    <div class="empty-state">
-                                        <p>Zero targets inside current projection field.</p>
+                        <div id="tab-biometrics" class="tab-pane" role="tabpanel">
+                            <div class="analytics-card">
+                                <div class="card-header"><span class="card-icon">👤</span>
+                                    <h3>Biometric Registry</h3><span id="face-count-badge"
+                                        class="stats-badge text-mono">0</span>
+                                </div>
+                                <div class="card-body">
+                                    <div id="face-analytics-container" class="face-grid">
+                                        <div class="empty-state">
+                                            <p>Zero targets inside current projection field.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div id="tab-stats" class="tab-pane" role="tabpanel">
-                        <div class="analytics-card panel-card">
-                            <div class="card-header"><span class="card-icon">📊</span>
-                                <h3>Telemetry Rollups</h3>
-                            </div>
-                            <div class="card-body">
-                                <div class="telemetry-grid">
-                                    <div class="telemetry-box"><span class="telemetry-label">Unique Identity
-                                            Structs</span><span id="tel-unique-faces"
-                                            class="telemetry-value text-mono">0</span></div>
-                                    <div class="telemetry-box"><span class="telemetry-label">Mean Chrono-Age</span><span
-                                            id="tel-avg-age" class="telemetry-value text-mono">--</span></div>
+                        <div id="tab-stats" class="tab-pane" role="tabpanel">
+                            <div class="analytics-card">
+                                <div class="card-header"><span class="card-icon">📊</span>
+                                    <h3>Telemetry Rollups</h3>
                                 </div>
-                                <div class="emotion-trend-section">
-                                    <h4 class="section-title">Aggregated Emotion Metrics</h4>
-                                    <div class="emotion-bars-container">
-                                        <div class="emotion-bar-item"><span class="emotion-name">Happy</span>
-                                            <div class="emotion-bar-track">
-                                                <div id="bar-happy" class="emotion-bar-fill happy-color"
-                                                    style="width: 0%"></div>
-                                            </div><span id="pct-happy" class="emotion-pct text-mono">0%</span>
+                                <div class="card-body">
+                                    <div class="telemetry-grid">
+                                        <div class="telemetry-box"><span class="telemetry-label">Unique Identity
+                                                Structs</span><span id="tel-unique-faces"
+                                                class="telemetry-value text-mono">0</span></div>
+                                        <div class="telemetry-box"><span class="telemetry-label">Mean Chrono-Age</span><span
+                                                id="tel-avg-age" class="telemetry-value text-mono">--</span></div>
+                                        <div class="telemetry-box"><span class="telemetry-label">Session Blinks</span><span
+                                                id="tel-blink-count" class="telemetry-value text-mono">0</span></div>
+                                        <div class="telemetry-box"><span class="telemetry-label">Drowsiness Status</span><span
+                                                id="tel-drowsy-status" class="telemetry-value badge-val-sm pulse-green">NORMAL</span></div>
+                                    </div>
+                                    <div class="emotion-trend-section">
+                                        <h4 class="section-title">Attention & Eye Vigilance</h4>
+                                        <div class="emotion-bars-container">
+                                            <div class="emotion-bar-item"><span class="emotion-name">Eye Aperture (EAR)</span>
+                                                <div class="emotion-bar-track">
+                                                    <div id="bar-ear" class="emotion-bar-fill happy-color" style="width: 0%"></div>
+                                                </div><span id="tel-ear-val" class="emotion-pct text-mono">0.00</span>
+                                            </div>
+                                            <div class="emotion-bar-item"><span class="emotion-name">Attention Index</span>
+                                                <div class="emotion-bar-track">
+                                                    <div id="bar-attention" class="emotion-bar-fill neutral-color" style="width: 0%"></div>
+                                                </div><span id="tel-attention-val" class="emotion-pct text-mono">100%</span>
+                                            </div>
                                         </div>
-                                        <div class="emotion-bar-item"><span class="emotion-name">Neutral</span>
-                                            <div class="emotion-bar-track">
-                                                <div id="bar-neutral" class="emotion-bar-fill neutral-color"
-                                                    style="width: 0%"></div>
-                                            </div><span id="pct-neutral" class="emotion-pct text-mono">0%</span>
-                                        </div>
-                                        <div class="emotion-bar-item"><span class="emotion-name">Surprised</span>
-                                            <div class="emotion-bar-track">
-                                                <div id="bar-surprised" class="emotion-bar-fill surprised-color"
-                                                    style="width: 0%"></div>
-                                            </div><span id="pct-surprised" class="emotion-pct text-mono">0%</span>
-                                        </div>
-                                        <div class="emotion-bar-item"><span class="emotion-name">Sad</span>
-                                            <div class="emotion-bar-track">
-                                                <div id="bar-sad" class="emotion-bar-fill sad-color" style="width: 0%">
-                                                </div>
-                                            </div><span id="pct-sad" class="emotion-pct text-mono">0%</span>
-                                        </div>
-                                        <div class="emotion-bar-item"><span class="emotion-name">Angry</span>
-                                            <div class="emotion-bar-track">
-                                                <div id="bar-angry" class="emotion-bar-fill angry-color"
-                                                    style="width: 0%"></div>
-                                            </div><span id="pct-angry" class="emotion-pct text-mono">0%</span>
+                                    </div>
+                                    <div class="emotion-trend-section">
+                                        <h4 class="section-title">Aggregated Emotion Metrics</h4>
+                                        <div class="emotion-bars-container">
+                                            <div class="emotion-bar-item"><span class="emotion-name">Happy</span>
+                                                <div class="emotion-bar-track">
+                                                    <div id="bar-happy" class="emotion-bar-fill happy-color"
+                                                        style="width: 0%"></div>
+                                                </div><span id="pct-happy" class="emotion-pct text-mono">0%</span>
+                                            </div>
+                                            <div class="emotion-bar-item"><span class="emotion-name">Neutral</span>
+                                                <div class="emotion-bar-track">
+                                                    <div id="bar-neutral" class="emotion-bar-fill neutral-color"
+                                                        style="width: 0%"></div>
+                                                </div><span id="pct-neutral" class="emotion-pct text-mono">0%</span>
+                                            </div>
+                                            <div class="emotion-bar-item"><span class="emotion-name">Surprised</span>
+                                                <div class="emotion-bar-track">
+                                                    <div id="bar-surprised" class="emotion-bar-fill surprised-color"
+                                                        style="width: 0%"></div>
+                                                </div><span id="pct-surprised" class="emotion-pct text-mono">0%</span>
+                                            </div>
+                                            <div class="emotion-bar-item"><span class="emotion-name">Sad</span>
+                                                <div class="emotion-bar-track">
+                                                    <div id="bar-sad" class="emotion-bar-fill sad-color" style="width: 0%">
+                                                    </div>
+                                                </div><span id="pct-sad" class="emotion-pct text-mono">0%</span>
+                                            </div>
+                                            <div class="emotion-bar-item"><span class="emotion-name">Angry</span>
+                                                <div class="emotion-bar-track">
+                                                    <div id="bar-angry" class="emotion-bar-fill angry-color"
+                                                        style="width: 0%"></div>
+                                                </div><span id="pct-angry" class="emotion-pct text-mono">0%</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -274,7 +364,8 @@
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </div>
         </main>
         <div id="toast-container" class="toast-container"></div>
     </div>

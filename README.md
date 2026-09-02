@@ -12,6 +12,22 @@ A high-performance, real-time web-based computer vision dashboard powered by **T
 - **Demographic Analysis**: Real-time age estimation and gender detection.
 - **Emotion Recognition Engine**: Classifies emotions into **Happy**, **Neutral**, **Surprised**, **Sad**, **Angry**, **Fearful**, and **Disgusted** with confidence scores.
 
+### 🎨 2. Interactive Cyber Air-Canvas (Mid-Air Finger Drawing)
+- **Fingertip Tracking & Neon Stroke Trails**: Draw glowing neon artwork in mid-air using your index fingertip (`☝️` pointing gesture).
+- **Air-Canvas Controls**: Floating HUD toolbar with 5 neon colors (Cyber Cyan, Neon Pink, Matrix Green, Solar Yellow, Laser Purple), brush thickness slider, and eraser/clear actions.
+- **Gesture Canvas Wipe**: Sustaining an Open Palm gesture (`🖐️`) clears the canvas.
+
+### 😴 3. Attention Monitor & Drowsiness Alert System
+- **Eye Aspect Ratio (EAR) Gauge**: Analyzes eye contour landmarks (indices 36–41 & 42–47) to calculate real-time eye aperture.
+- **Drowsiness Alarm System**: Displays a glowing red **`🚨 DROWSINESS ALARM!`** overlay banner and sounds a Web Audio synth alarm when eyes remain closed ($\text{EAR} < 0.20$) for $\ge 1.3$ seconds.
+- **Attention Focus Index**: Evaluates head orientation (yaw angle offset) relative to camera center ($0\% - 100\%$).
+- **Blink Counter**: Tracks session blinks per minute and cumulative blink metrics.
+
+### 🔊 5. Cyber SFX Sound Engine & AI Voice Assistant
+- **Web Audio Synth Effects**: Sci-fi audio chimes and frequency sweep laser effects for gestures (*Web Shooter* blast, *Air Canvas* laser draw, *OK Sign* chime, *Target Lock* double beep, *Palm Wipe* swoosh).
+- **AI Voice Assistant (`speechSynthesis`)**: Synthesizes sci-fi voice notifications for key system events (*"Subject identified"*, *"Air canvas wiped clean"*, *"Web shooter active"*, *"Drowsiness warning triggered"*).
+- **Mute / Unmute Controls**: Toggle switches for SFX effects and Voice Assistant inside the Feature Control Hub modal.
+
 ### ✋ 2. Cybernetic Hand Tracking & Gesture Recognition
 - **21 3D Hand Keypoints**: Uses MediaPipe HandLandmarker with GPU acceleration to track up to two hands simultaneously.
 - **Real-Time Gesture Classifier**: Instantly identifies hand gestures:

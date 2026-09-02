@@ -21,8 +21,32 @@ let detectHandsEnabled = true;
 let detectGesturesEnabled = true;
 let spiderEffectEnabled = true;
 let showJointNumbersEnabled = true;
+let detectDrowsinessEnabled = true;
+let audioAlarmEnabled = true;
+let sfxEnabled = true;
+let voiceAssistantEnabled = true;
+let airCanvasEnabled = true;
+let airBrushColor = '#00f2fe';
+let airBrushSize = 6;
+let lastAirPoint = null;
 let hudActive = true;
 let confidenceThreshold = 0.40; // default 40%
+
+// SFX & Voice Timestamps
+let lastSpeechTime = 0;
+let lastWebShooterSFXTime = 0;
+let lastChimeSFXTime = 0;
+let lastLockSFXTime = 0;
+
+// Attention & Drowsiness Tracker State
+let closedEyeStartTime = 0;
+let isEyeClosedState = false;
+let isDrowsyAlarmActive = false;
+let sessionBlinkCount = 0;
+let currentEarValue = 0.30;
+let currentAttentionIndex = 100;
+let audioCtx = null;
+let lastAudioBeepTime = 0;
 
 // Active tab and DOM update throttling
 let activeTab = 'tab-settings';
@@ -59,6 +83,18 @@ const sessionStats = {
 const elements = {
     video: document.getElementById('webcam'),
     canvas: document.getElementById('overlay'),
+    drawingCanvas: document.getElementById('drawing-canvas'),
+    airToolbar: document.getElementById('air-canvas-toolbar'),
+    btnToggleAir: document.getElementById('btn-toggle-air'),
+    colorSwatches: document.querySelectorAll('.color-swatch'),
+    brushSizeSlider: document.getElementById('brush-size-slider'),
+    btnClearCanvas: document.getElementById('btn-clear-canvas'),
+
+    // Master Feature Hub Modal
+    btnOpenHub: document.getElementById('btn-open-hub'),
+    btnCloseHub: document.getElementById('btn-close-hub'),
+    featureHubModal: document.getElementById('feature-hub-modal'),
+
     fpsCounter: document.getElementById('fps-counter'),
     backendType: document.getElementById('backend-type'),
     systemStatus: document.getElementById('system-status'),
@@ -82,6 +118,10 @@ const elements = {
     toggleGestures: document.getElementById('toggle-gestures'),
     toggleSpider: document.getElementById('toggle-spider'),
     toggleNumbers: document.getElementById('toggle-numbers'),
+    toggleDrowsiness: document.getElementById('toggle-drowsiness'),
+    toggleAudioAlarm: document.getElementById('toggle-audio-alarm'),
+    toggleSfx: document.getElementById('toggle-sfx'),
+    toggleVoice: document.getElementById('toggle-voice'),
     confidenceSlider: document.getElementById('confidence-threshold'),
     confidenceVal: document.getElementById('confidence-val'),
 
@@ -100,6 +140,13 @@ const elements = {
     // Telemetry Dashboard
     telUniqueFaces: document.getElementById('tel-unique-faces'),
     telAvgAge: document.getElementById('tel-avg-age'),
+    telBlinkCount: document.getElementById('tel-blink-count'),
+    telDrowsyStatus: document.getElementById('tel-drowsy-status'),
+    barEar: document.getElementById('bar-ear'),
+    telEarVal: document.getElementById('tel-ear-val'),
+    barAttention: document.getElementById('bar-attention'),
+    telAttentionVal: document.getElementById('tel-attention-val'),
+    drowsinessAlertOverlay: document.getElementById('drowsiness-alert-overlay'),
     toastContainer: document.getElementById('toast-container'),
 
     // Theme Toggle Elements
@@ -237,6 +284,8 @@ class FaceTracker {
                 };
 
                 activeTracks.push(newTrack);
+                playTargetLockSFX();
+                speakVoiceAlert(`Subject #${newId} identified`);
                 showToast(`Person #${newId} detected (~${Math.round(det.age)}y/o, ${det.gender})`, 'success');
             }
         }
@@ -365,6 +414,358 @@ function showToast(message, type = 'default') {
     }, 3500);
 }
 
+// --- ATTENTION & DROWSINESS ALGORITHM ENGINE ---
+function calculateEuclideanDistance(pt1, pt2) {
+    return Math.hypot(pt1.x - pt2.x, pt1.y - pt2.y);
+}
+
+function calculateEAR(landmarks) {
+    if (!landmarks || !landmarks.positions || landmarks.positions.length < 68) {
+        return 0.30;
+    }
+    const pts = landmarks.positions;
+
+    // Left eye: indices 36 to 41
+    const l1 = calculateEuclideanDistance(pts[37], pts[41]);
+    const l2 = calculateEuclideanDistance(pts[38], pts[40]);
+    const l3 = calculateEuclideanDistance(pts[36], pts[39]);
+    const leftEar = (l1 + l2) / (2.0 * (l3 || 1));
+
+    // Right eye: indices 42 to 47
+    const r1 = calculateEuclideanDistance(pts[43], pts[47]);
+    const r2 = calculateEuclideanDistance(pts[44], pts[46]);
+    const r3 = calculateEuclideanDistance(pts[42], pts[45]);
+    const rightEar = (r1 + r2) / (2.0 * (r3 || 1));
+
+    return (leftEar + rightEar) / 2.0;
+}
+
+function calculateAttentionScore(landmarks) {
+    if (!landmarks || !landmarks.positions || landmarks.positions.length < 68) {
+        return 100;
+    }
+    const pts = landmarks.positions;
+    const eyeSpan = calculateEuclideanDistance(pts[36], pts[45]);
+    if (eyeSpan === 0) return 100;
+
+    const eyeMidX = (pts[36].x + pts[45].x) / 2;
+    const noseX = pts[30].x;
+
+    const offsetRatio = Math.abs(noseX - eyeMidX) / eyeSpan;
+    const score = Math.max(0, Math.min(100, Math.round((1 - (offsetRatio / 0.35)) * 100)));
+    return score;
+}
+
+function getAudioCtx() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    return audioCtx;
+}
+
+function speakVoiceAlert(text) {
+    if (!voiceAssistantEnabled || !('speechSynthesis' in window)) return;
+    const now = Date.now();
+    if (now - lastSpeechTime < 2500) return;
+    lastSpeechTime = now;
+
+    try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Female') || v.name.includes('Samantha')));
+        if (preferredVoice) utterance.voice = preferredVoice;
+
+        window.speechSynthesis.speak(utterance);
+    } catch (err) {
+        console.warn('Voice synthesis exception:', err);
+    }
+}
+
+function playWebShooterSFX() {
+    if (!sfxEnabled) return;
+    const now = Date.now();
+    if (now - lastWebShooterSFXTime < 450) return;
+    lastWebShooterSFXTime = now;
+
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(960, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(180, ctx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+    } catch (err) {
+        console.warn('SFX error:', err);
+    }
+}
+
+function playGestureChimeSFX() {
+    if (!sfxEnabled) return;
+    const now = Date.now();
+    if (now - lastChimeSFXTime < 600) return;
+    lastChimeSFXTime = now;
+
+    try {
+        const ctx = getAudioCtx();
+        const notes = [523.25, 659.25, 783.99];
+        notes.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const startTime = ctx.currentTime + idx * 0.08;
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+
+            gain.gain.setValueAtTime(0.18, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.22);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + 0.22);
+        });
+    } catch (err) {
+        console.warn('Chime SFX error:', err);
+    }
+}
+
+function playPalmWipeSFX() {
+    if (!sfxEnabled) return;
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(450, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.35);
+
+        gain.gain.setValueAtTime(0.28, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+    } catch (err) {
+        console.warn('Wipe SFX error:', err);
+    }
+}
+
+function playTargetLockSFX() {
+    if (!sfxEnabled) return;
+    const now = Date.now();
+    if (now - lastLockSFXTime < 1200) return;
+    lastLockSFXTime = now;
+
+    try {
+        const ctx = getAudioCtx();
+        [587.33, 880].forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            const startTime = ctx.currentTime + idx * 0.09;
+
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, startTime);
+
+            gain.gain.setValueAtTime(0.1, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.12);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + 0.12);
+        });
+    } catch (err) {
+        console.warn('Target lock SFX error:', err);
+    }
+}
+
+function triggerSynthAlarmSound() {
+    if (!audioAlarmEnabled) return;
+    const now = Date.now();
+    if (now - lastAudioBeepTime < 320) return;
+    lastAudioBeepTime = now;
+
+    try {
+        const ctx = getAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.22);
+
+        gain.gain.setValueAtTime(0.35, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.22);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start();
+        osc.stop(ctx.currentTime + 0.22);
+    } catch (err) {
+        console.warn('Audio alarm exception:', err);
+    }
+}
+
+function processDrowsinessAndAttention(faceDetections) {
+    if (!detectDrowsinessEnabled || !faceDetections || faceDetections.length === 0) {
+        isDrowsyAlarmActive = false;
+        if (elements.drowsinessAlertOverlay) {
+            elements.drowsinessAlertOverlay.classList.add('hidden');
+        }
+        return;
+    }
+
+    const primaryFace = faceDetections[0];
+    if (!primaryFace || !primaryFace.landmarks) return;
+
+    const ear = calculateEAR(primaryFace.landmarks);
+    const attention = calculateAttentionScore(primaryFace.landmarks);
+    currentEarValue = ear;
+    currentAttentionIndex = attention;
+
+    const now = Date.now();
+    const DROWSY_EAR_THRESHOLD = 0.20;
+    const OPEN_EAR_THRESHOLD = 0.23;
+
+    if (ear < DROWSY_EAR_THRESHOLD) {
+        if (!isEyeClosedState) {
+            isEyeClosedState = true;
+            closedEyeStartTime = now;
+        } else {
+            const closedDuration = now - closedEyeStartTime;
+            if (closedDuration >= 1300) {
+                isDrowsyAlarmActive = true;
+                triggerSynthAlarmSound();
+            }
+        }
+    } else if (ear >= OPEN_EAR_THRESHOLD) {
+        if (isEyeClosedState) {
+            const duration = now - closedEyeStartTime;
+            if (duration > 80 && duration < 800) {
+                sessionBlinkCount++;
+            }
+            isEyeClosedState = false;
+        }
+        isDrowsyAlarmActive = false;
+    }
+
+    if (elements.drowsinessAlertOverlay) {
+        if (isDrowsyAlarmActive) {
+            elements.drowsinessAlertOverlay.classList.remove('hidden');
+        } else {
+            elements.drowsinessAlertOverlay.classList.add('hidden');
+        }
+    }
+}
+
+// --- AIR CANVAS DRAWING ENGINE ---
+let lastPalmClearTime = 0;
+
+function clearAirCanvas() {
+    if (!elements.drawingCanvas) return;
+    const drawCtx = elements.drawingCanvas.getContext('2d');
+    drawCtx.clearRect(0, 0, elements.drawingCanvas.width, elements.drawingCanvas.height);
+    playPalmWipeSFX();
+    speakVoiceAlert('Air canvas wiped clean');
+    showToast('Air Canvas wiped clean 🖐️!', 'success');
+}
+
+function processAirCanvas(mappedHands) {
+    if (!airCanvasEnabled || !elements.drawingCanvas) return;
+    const drawCtx = elements.drawingCanvas.getContext('2d');
+
+    if (!mappedHands || mappedHands.length === 0) {
+        lastAirPoint = null;
+        return;
+    }
+
+    let isPointing = false;
+    const now = Date.now();
+
+    mappedHands.forEach(hand => {
+        const keypoints = hand.keypoints;
+        if (!keypoints || keypoints.length < 21) return;
+
+        const gestureObj = classifyGesture(keypoints);
+        const gestureName = gestureObj && gestureObj.name ? gestureObj.name.toUpperCase() : '';
+
+        // Open Palm gesture detection (all 4 fingers raised)
+        const allFingersUp = keypoints[8].y < keypoints[6].y &&
+                             keypoints[12].y < keypoints[10].y &&
+                             keypoints[16].y < keypoints[14].y &&
+                             keypoints[20].y < keypoints[18].y;
+
+        const isOpenPalm = gestureName.includes('PALM') || allFingersUp;
+
+        if (isOpenPalm) {
+            lastAirPoint = null;
+            if (now - lastPalmClearTime > 1200) {
+                lastPalmClearTime = now;
+                clearAirCanvas();
+            }
+            return;
+        }
+
+        // Check if index finger is extended while middle finger is curled
+        const indexExtended = keypoints[8].y < keypoints[6].y && keypoints[12].y > keypoints[10].y;
+
+        if (gestureName.includes('POINTING') || indexExtended) {
+            isPointing = true;
+            const indexTip = keypoints[8];
+
+            drawCtx.save();
+            drawCtx.strokeStyle = airBrushColor;
+            drawCtx.fillStyle = airBrushColor;
+            drawCtx.lineWidth = airBrushSize;
+            drawCtx.lineCap = 'round';
+            drawCtx.lineJoin = 'round';
+            drawCtx.shadowColor = airBrushColor;
+            drawCtx.shadowBlur = airBrushSize * 1.5;
+
+            if (lastAirPoint) {
+                drawCtx.beginPath();
+                drawCtx.moveTo(lastAirPoint.x, lastAirPoint.y);
+                drawCtx.lineTo(indexTip.x, indexTip.y);
+                drawCtx.stroke();
+            }
+
+            drawCtx.beginPath();
+            drawCtx.arc(indexTip.x, indexTip.y, airBrushSize / 2, 0, 2 * Math.PI);
+            drawCtx.fill();
+            drawCtx.restore();
+
+            lastAirPoint = { x: indexTip.x, y: indexTip.y };
+        }
+    });
+
+    if (!isPointing) {
+        lastAirPoint = null;
+    }
+}
+
 // --- MODEL INITIALIZATION ---
 async function initAIModels() {
     try {
@@ -471,6 +872,10 @@ async function startCamera() {
             elements.resolution.textContent = `${w}x${h}`;
             elements.canvas.width = w;
             elements.canvas.height = h;
+            if (elements.drawingCanvas) {
+                elements.drawingCanvas.width = w;
+                elements.drawingCanvas.height = h;
+            }
 
             setupCameraDevices();
 
@@ -673,9 +1078,27 @@ async function drawLoop() {
             const rawDetectedObjects = smoothedDetections.filter(d => d.score >= confidenceThreshold);
             detectedObjects = objectTracker.update(rawDetectedObjects);
             visibleTrackedFaces = faceTracker.update(faceDetections);
+            processDrowsinessAndAttention(visibleTrackedFaces);
         }
     } catch (err) {
         console.error('Inference loop error:', err);
+    }
+
+    let mappedHands = [];
+    if (detectHandsEnabled && handDetections && handDetections.landmarks && handDetections.landmarks.length > 0) {
+        mappedHands = handDetections.landmarks.map((landmarks, idx) => {
+            const keypoints = landmarks.map(pt => ({
+                x: pt.x * elements.canvas.width,
+                y: pt.y * elements.canvas.height,
+                z: pt.z
+            }));
+            const rawHandedness = handDetections.handedness[idx]?.[0]?.categoryName || 'Left';
+            const isLeft = rawHandedness === 'Left';
+            return { keypoints, isLeft, handedness: rawHandedness };
+        });
+        processAirCanvas(mappedHands);
+    } else {
+        processAirCanvas([]);
     }
 
     if (hudActive) {
@@ -703,19 +1126,23 @@ async function drawLoop() {
             const w = box.width;
             const h = box.height;
 
-            ctx.strokeStyle = faceColor;
-            ctx.lineWidth = 2;
+            const strokeColor = isDrowsyAlarmActive ? '#ef4444' : faceColor;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = isDrowsyAlarmActive ? 4 : 2;
             ctx.strokeRect(x, y, w, h);
 
-            ctx.fillStyle = 'rgba(79, 70, 229, 0.04)';
+            ctx.fillStyle = isDrowsyAlarmActive ? 'rgba(239, 68, 68, 0.15)' : 'rgba(79, 70, 229, 0.04)';
             ctx.fillRect(x, y, w, h);
 
             const roundedAge = Math.round(face.age);
             const genderSymbol = face.gender === 'male' ? 'M' : 'F';
             const dominantEmotion = getDominantEmotion(face.expressions);
-            const label = `Person #${face.id} | ${genderSymbol} (~${roundedAge}) | ${dominantEmotion}`;
+            const earStr = currentEarValue ? currentEarValue.toFixed(2) : '0.30';
+            const label = isDrowsyAlarmActive ? 
+                `⚠️ Person #${face.id} | DROWSY ALARM!` : 
+                `Person #${face.id} | ${genderSymbol} (~${roundedAge}) | ${dominantEmotion} | EAR: ${earStr}`;
 
-            drawSassTextBadge(ctx, label, x, y, faceColor);
+            drawSassTextBadge(ctx, label, x, y, strokeColor);
 
             if (face.landmarks && face.landmarks.positions) {
                 ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
@@ -727,17 +1154,7 @@ async function drawLoop() {
             }
         });
 
-        if (detectHandsEnabled && handDetections && handDetections.landmarks && handDetections.landmarks.length > 0) {
-            const mappedHands = handDetections.landmarks.map((landmarks, idx) => {
-                const keypoints = landmarks.map(pt => ({
-                    x: pt.x * elements.canvas.width,
-                    y: pt.y * elements.canvas.height,
-                    z: pt.z
-                }));
-                const rawHandedness = handDetections.handedness[idx]?.[0]?.categoryName || 'Left';
-                const isLeft = rawHandedness === 'Left';
-                return { keypoints, isLeft, handedness: rawHandedness };
-            });
+        if (mappedHands.length > 0) {
 
             let handsClose = false;
             let closeDist = 0;
@@ -831,8 +1248,12 @@ async function drawLoop() {
                         if (Date.now() - lastBlastTimes[handSide] > 600) {
                             activeWebBlasts.push(new WebBlastEffect(palmCenter.x, palmCenter.y, glowHue));
                             lastBlastTimes[handSide] = Date.now();
+                            playWebShooterSFX();
+                            speakVoiceAlert('Web shooter active');
                             showToast(`${handSide.toUpperCase()} HAND: Web Shooter Activated!`, 'success');
                         }
+                    } else if (['OK SIGN', 'PEACE SIGN', 'THUMBS UP'].some(g => gesture.name.includes(g))) {
+                        playGestureChimeSFX();
                     }
                 }
 
@@ -1354,6 +1775,29 @@ function updateSessionTelemetry(faces) {
         elements.telAvgAge.textContent = '--';
     }
 
+    // Attention & Drowsiness Telemetry Update
+    if (elements.telBlinkCount) elements.telBlinkCount.textContent = sessionBlinkCount;
+    if (elements.telEarVal) elements.telEarVal.textContent = currentEarValue ? currentEarValue.toFixed(2) : '0.30';
+    if (elements.barEar) {
+        const earPct = Math.min(100, Math.max(0, Math.round((currentEarValue / 0.35) * 100)));
+        elements.barEar.style.width = `${earPct}%`;
+    }
+    if (elements.telAttentionVal) elements.telAttentionVal.textContent = `${currentAttentionIndex}%`;
+    if (elements.barAttention) elements.barAttention.style.width = `${currentAttentionIndex}%`;
+
+    if (elements.telDrowsyStatus) {
+        if (isDrowsyAlarmActive) {
+            elements.telDrowsyStatus.textContent = '🚨 DROWSY ALARM';
+            elements.telDrowsyStatus.className = 'telemetry-value badge-val-sm pulse-red';
+        } else if (isEyeClosedState) {
+            elements.telDrowsyStatus.textContent = 'EYES CLOSED';
+            elements.telDrowsyStatus.className = 'telemetry-value badge-val-sm pulse-yellow';
+        } else {
+            elements.telDrowsyStatus.textContent = 'NORMAL';
+            elements.telDrowsyStatus.className = 'telemetry-value badge-val-sm pulse-green';
+        }
+    }
+
     faces.forEach(face => {
         const dominant = getDominantEmotion(face.expressions);
         if (dominant in sessionStats.emotionHits) {
@@ -1408,6 +1852,14 @@ function captureSnapshot() {
         bufferCtx.drawImage(elements.video, 0, 0, bufferCanvas.width, bufferCanvas.height);
         bufferCtx.restore();
 
+        if (elements.drawingCanvas) {
+            bufferCtx.save();
+            bufferCtx.translate(bufferCanvas.width, 0);
+            bufferCtx.scale(-1, 1);
+            bufferCtx.drawImage(elements.drawingCanvas, 0, 0, bufferCanvas.width, bufferCanvas.height);
+            bufferCtx.restore();
+        }
+
         if (hudActive) {
             bufferCtx.save();
             bufferCtx.translate(bufferCanvas.width, 0);
@@ -1426,6 +1878,119 @@ function captureSnapshot() {
         console.error('Screenshot failed:', err);
         showToast('Screenshot capture failed.', 'error');
     }
+}
+
+// --- AIR CANVAS TOOLBAR EVENT LISTENERS ---
+if (elements.btnToggleAir) {
+    elements.btnToggleAir.addEventListener('click', () => {
+        airCanvasEnabled = !airCanvasEnabled;
+        elements.btnToggleAir.classList.toggle('active', airCanvasEnabled);
+        showToast(`Air Canvas ${airCanvasEnabled ? 'enabled' : 'disabled'}.`);
+    });
+}
+
+if (elements.colorSwatches) {
+    elements.colorSwatches.forEach(swatch => {
+        swatch.addEventListener('click', () => {
+            elements.colorSwatches.forEach(s => s.classList.remove('active'));
+            swatch.classList.add('active');
+            airBrushColor = swatch.dataset.color || '#00f2fe';
+        });
+    });
+}
+
+if (elements.brushSizeSlider) {
+    elements.brushSizeSlider.addEventListener('input', (e) => {
+        airBrushSize = parseInt(e.target.value);
+    });
+}
+
+if (elements.btnClearCanvas) {
+    elements.btnClearCanvas.addEventListener('click', clearAirCanvas);
+}
+
+// --- MOUSE & TOUCH FALLBACK DRAWING LISTENERS ---
+let isMouseDrawing = false;
+let mouseLastPoint = null;
+
+if (elements.drawingCanvas) {
+    const getCanvasPos = (e) => {
+        const rect = elements.drawingCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rawX = clientX - rect.left;
+        const flippedX = rect.width - rawX;
+        const scaleX = elements.drawingCanvas.width / rect.width;
+        const scaleY = elements.drawingCanvas.height / rect.height;
+        return {
+            x: flippedX * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    };
+
+    const startDraw = (e) => {
+        if (!airCanvasEnabled) return;
+        isMouseDrawing = true;
+        mouseLastPoint = getCanvasPos(e);
+    };
+
+    const drawMove = (e) => {
+        if (!isMouseDrawing || !airCanvasEnabled || !mouseLastPoint) return;
+        const currentPos = getCanvasPos(e);
+        const drawCtx = elements.drawingCanvas.getContext('2d');
+
+        drawCtx.save();
+        drawCtx.strokeStyle = airBrushColor;
+        drawCtx.fillStyle = airBrushColor;
+        drawCtx.lineWidth = airBrushSize;
+        drawCtx.lineCap = 'round';
+        drawCtx.lineJoin = 'round';
+        drawCtx.shadowColor = airBrushColor;
+        drawCtx.shadowBlur = airBrushSize * 1.5;
+
+        drawCtx.beginPath();
+        drawCtx.moveTo(mouseLastPoint.x, mouseLastPoint.y);
+        drawCtx.lineTo(currentPos.x, currentPos.y);
+        drawCtx.stroke();
+        drawCtx.restore();
+
+        mouseLastPoint = currentPos;
+    };
+
+    const stopDraw = () => {
+        isMouseDrawing = false;
+        mouseLastPoint = null;
+    };
+
+    elements.drawingCanvas.addEventListener('mousedown', startDraw);
+    elements.drawingCanvas.addEventListener('mousemove', drawMove);
+    elements.drawingCanvas.addEventListener('mouseup', stopDraw);
+    elements.drawingCanvas.addEventListener('mouseleave', stopDraw);
+
+    elements.drawingCanvas.addEventListener('touchstart', startDraw, { passive: true });
+    elements.drawingCanvas.addEventListener('touchmove', drawMove, { passive: true });
+    elements.drawingCanvas.addEventListener('touchend', stopDraw);
+}
+
+// --- MASTER FEATURE CONTROL HUB MODAL LISTENERS ---
+if (elements.btnOpenHub && elements.featureHubModal) {
+    elements.btnOpenHub.addEventListener('click', () => {
+        elements.featureHubModal.classList.remove('hidden');
+    });
+}
+
+if (elements.btnCloseHub && elements.featureHubModal) {
+    elements.btnCloseHub.addEventListener('click', () => {
+        elements.featureHubModal.classList.add('hidden');
+    });
+}
+
+if (elements.featureHubModal) {
+    elements.featureHubModal.addEventListener('click', (e) => {
+        if (e.target === elements.featureHubModal) {
+            elements.featureHubModal.classList.add('hidden');
+        }
+    });
 }
 
 // --- EVENT BINDINGS ---
@@ -1459,6 +2024,40 @@ elements.toggleNumbers.addEventListener('change', (e) => {
     showToast(`Joint numbers ${showJointNumbersEnabled ? 'enabled' : 'disabled'}.`);
 });
 
+if (elements.toggleDrowsiness) {
+    elements.toggleDrowsiness.addEventListener('change', (e) => {
+        detectDrowsinessEnabled = e.target.checked;
+        if (!detectDrowsinessEnabled && elements.drowsinessAlertOverlay) {
+            elements.drowsinessAlertOverlay.classList.add('hidden');
+        }
+        showToast(`Drowsiness monitor ${detectDrowsinessEnabled ? 'enabled' : 'disabled'}.`);
+    });
+}
+
+if (elements.toggleAudioAlarm) {
+    elements.toggleAudioAlarm.addEventListener('change', (e) => {
+        audioAlarmEnabled = e.target.checked;
+        showToast(`Audio alarm ${audioAlarmEnabled ? 'enabled' : 'disabled'}.`);
+    });
+}
+
+if (elements.toggleSfx) {
+    elements.toggleSfx.addEventListener('change', (e) => {
+        sfxEnabled = e.target.checked;
+        showToast(`Cyber SFX ${sfxEnabled ? 'enabled' : 'disabled'}.`);
+    });
+}
+
+if (elements.toggleVoice) {
+    elements.toggleVoice.addEventListener('change', (e) => {
+        voiceAssistantEnabled = e.target.checked;
+        if (voiceAssistantEnabled) {
+            speakVoiceAlert('AI voice assistant online');
+        }
+        showToast(`Voice assistant ${voiceAssistantEnabled ? 'enabled' : 'disabled'}.`);
+    });
+}
+
 elements.confidenceSlider.addEventListener('input', (e) => {
     const val = parseInt(e.target.value);
     confidenceThreshold = val / 100;
@@ -1487,6 +2086,10 @@ window.addEventListener('resize', () => {
         const h = elements.video.videoHeight;
         elements.canvas.width = w;
         elements.canvas.height = h;
+        if (elements.drawingCanvas) {
+            elements.drawingCanvas.width = w;
+            elements.drawingCanvas.height = h;
+        }
     }
 });
 
